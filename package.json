@@ -1,0 +1,20 @@
+{
+  "name": "ureten-cocuk-local",
+  "version": "1.0.0",
+  "description": "Üreten Çocuk Yerel Operasyon Yazılımı",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "ngrok": "^5.0.0-beta.2",
+    "node-cron": "^4.6.0",
+    "node-thermal-printer": "^4.6.1",
+    "pdf-to-printer": "^5.8.1",
+    "sqlite3": "^5.1.7",
+    "thermal-printer": "^1.0.5"
+  }
+}

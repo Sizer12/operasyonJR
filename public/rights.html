@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hak & Paket Yönetimi</title>
+<style>
+body{font-family:Arial, sans-serif; background:#f4f4f4;margin:0; padding: 24px;color:#111}
+.wrap{max-width: 900px; margin:auto} 
+h1{font-size: 30px; margin:0 0 8px}
+.grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:20px;}
+.card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 5px rgba(0,0,0,0.05); }
+input, select { width:100%; box-sizing: border-box; padding: 12px; margin-top:5px; border-radius: 8px; border:1px solid #ddd; }
+label { font-weight:bold; font-size:14px; margin-top:15px; display:block; }
+.btn { width: 100%; padding:15px; color:white; border:none; border-radius:8px; font-weight:bold; margin-top:20px; cursor:pointer; font-size:16px;}
+.btn-green { background:#15803d; } .btn-blue { background:#1d4ed8; }
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items:center; justify-content:center; z-index:99; }
+.modal { background: #fff; border-radius: 22px; padding: 24px; max-width: 320px; width:100%; box-sizing:border-box; text-align:center;}
+@media (max-width: 650px){.grid-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="/home.html" style="color:#1d4ed8; text-decoration:none; font-weight:bold; display:inline-block; margin-bottom:15px;">&larr; Ana Sayfa</a>
+  <h1>Hak & Paket Yönetimi</h1>
+  
+  <input type="text" id="searchInput" placeholder="Öğrenci Ara (İsim, Telefon, ID)..." onkeyup="searchStudent()" style="margin-bottom:10px; font-size:16px;">
+  <div id="searchResults" style="background:#fff; max-height:200px; overflow-y:auto; border-radius:8px; margin-bottom:20px;"></div>
+
+  <div id="studentPanel" style="display:none;">
+    <h2 id="studentNameDisplay" style="margin-bottom:15px;">-</h2>
+    
+    <div style="display:flex; gap:15px; margin-bottom:20px;">
+      <div class="card" style="flex:1; text-align:center;">
+        <div style="color:#666; font-size:14px;">Oyun Alanı Telafi</div>
+        <!-- "undefined Hak" hatasını giderdik, dakika (dk) formatına çevirdik -->
+        <h2 style="margin:5px 0 0;" id="infoTelafi">0 dk</h2>
+      </div>
+      <div class="card" style="flex:1; text-align:center;">
+        <div style="color:#666; font-size:14px;">Paket</div>
+        <h2 style="margin:5px 0 0;" id="infoPackage">0 dk</h2>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- SOL FORM: Telafi Tanımlama -->
+      <div class="card">
+          <h3 style="margin-top:0;">Dramatik Oyun Alanı Telafisi Tanımla</h3>
+          
+          <label>Dakika</label>
+          <input type="number" id="telafiMinutesInput" value="60" step="30" min="0">
+          <small style="display:block; color:#777; margin-top:5px; line-height:1.4;">Not: Son kullanma tarihi sistem ayarlarından otomatik (varsayılan +30 gün) hesaplanır.</small>
+          
+          <label>Kaynak / Not</label>
+          <input type="text" id="telafiNoteInput" value="Dramatik Oyun Alanı Telafisi">
+          
+          <button onclick="addTelafi()" class="btn btn-green">TELAFİ TANIMLA</button>
+      </div>
+
+      <!-- SAĞ FORM: Paket Satış -->
+      <div class="card">
+          <h3 style="margin-top:0;">Paket Sat / Tanımla</h3>
+          <label>Satış Tutarı (Ana Para - TL)</label>
+          <input type="number" id="packagePriceInput" placeholder="Örn: 5000">
+          <label>Bonus Tutarı (TL)</label>
+          <input type="number" id="packageBonusInput" placeholder="Örn: 5000" value="0">
+          <div id="quickBonusArea" style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;"></div>
+          <small style="display:block; color:#777; margin-top:5px; line-height:1.4;">Not: Son kullanma tarihi sistem ayarlarından otomatik (varsayılan +30 gün) hesaplanır.</small>
+          <label>Ödeme Tipi</label>
+          <select id="packagePaymentType">
+              <option>NAKİT</option>
+              <option>KREDİ KARTI</option>
+              <option>HAVALE/EFT</option>
+          </select>
+          <button onclick="addPackage()" class="btn btn-blue">PAKETİ TANIMLA</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Personel Şifresi Modalı (Tüm tarayıcılarla tam uyumlu) -->
+<div class="modal-bg" id="pinModalBg">
+  <div class="modal">
+    <h3 style="margin-top:0; color:#111;">Personel Şifresi</h3>
+    <p style="font-size:14px; color:#666;">İşlemi onaylamak için 4 haneli PIN girin.</p>
+    <input type="tel" id="globalPinInput" maxlength="4" autocomplete="off" style="-webkit-text-security: disc; font-size:32px; text-align:center; letter-spacing:15px; margin-bottom:20px;">
+    <div style="display:flex; gap:10px;">
+      <button style="flex:1; border:none; padding:15px; border-radius:12px; background:#15803d; color:#fff; font-weight:bold; cursor:pointer;" onclick="verifyGlobalPin()">ONAYLA</button>
+      <button style="flex:1; border:none; padding:15px; border-radius:12px; background:#6b7280; color:#fff; font-weight:bold; cursor:pointer;" onclick="closeGlobalPin()">İPTAL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentChildId = null;
+
+fetch('/api/bonus-packages').then(r=>r.json()).then(data => {
+    if(data.success && data.packages.length > 0) {
+        document.getElementById('quickBonusArea').innerHTML = data.packages.map(p => 
+            `<button onclick="setPackageVals(${p.sales_amount}, ${p.bonus_amount})" style="padding:8px 12px; background:#e5e7eb; border:1px solid #ccc; border-radius:8px; cursor:pointer;">${p.sales_amount}+${p.bonus_amount}</button>`
+        ).join('');
+    }
+});
+function setPackageVals(sales, bonus) {
+    document.getElementById('packagePriceInput').value = sales;
+    document.getElementById('packageBonusInput').value = bonus;
+}
+
+
+function searchStudent() {
+  const q = document.getElementById('searchInput').value;
+  const resDiv = document.getElementById('searchResults');
+  if(q.length < 2) { resDiv.innerHTML = ''; return; }
+  fetch('/api/students/search?q=' + encodeURIComponent(q)).then(res => res.json()).then(r => {
+    resDiv.innerHTML = (r.students||[]).map(x => '<div style="padding:15px; border-bottom:1px solid #eee; cursor:pointer;" onclick="selectStudent(\'' + x.child_id + '\')">' + x.student_name + ' - ' + x.parent_phone + '</div>').join('');
+  });
+}
+
+function selectStudent(childId) {
+    currentChildId = childId;
+    document.getElementById('searchResults').innerHTML = '';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('studentPanel').style.display = 'block';
+    loadStudentData();
+}
+
+function loadStudentData() {
+    if (!currentChildId) return;
+    fetch('/api/rights/get/' + encodeURIComponent(currentChildId)).then(res => res.json()).then(r => {
+        if(!r.success) return alert(r.message);
+        document.getElementById('studentNameDisplay').innerText = r.student.student_name;
+        // Backend'den gelen dakika bilgisini ekrana yazıyoruz
+        document.getElementById('infoTelafi').innerText = (r.telafi_minutes || 0) + ' dk';
+        document.getElementById('infoPackage').innerText = (r.package_minutes || 0) + ' TL';
+    });
+}
+
+function addTelafi() {
+    const minutes = document.getElementById('telafiMinutesInput').value;
+    const note = document.getElementById('telafiNoteInput').value;
+    
+    if (!minutes || minutes <= 0) return alert("Geçerli bir dakika giriniz.");
+    
+    promptPIN((personelName) => {
+        fetch('/api/rights/add-telafi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                child_id: currentChildId, 
+                minutes: minutes, 
+                source: note, 
+                personel: personelName 
+            })
+        }).then(res => res.json()).then(r => {
+            alert(r.message);
+            if (r.success) loadStudentData();
+        });
+    });
+}
+
+function addPackage() {
+    const price = document.getElementById('packagePriceInput').value;
+    const bonus = document.getElementById('packageBonusInput').value;
+        const paymentType = document.getElementById('packagePaymentType').value;
+    
+    if (!price || price <= 0) return alert("Geçerli bir satış tutarı giriniz.");
+    
+    promptPIN((personelName) => {
+        fetch('/api/rights/add-package', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                child_id: currentChildId, 
+                price: price,
+                bonus: bonus, 
+                                payment_type: paymentType,
+                source: 'Paket Satışı', 
+                personel: personelName 
+            })
+        }).then(res => res.json()).then(r => {
+            alert(r.message);
+            if (r.success) {
+                document.getElementById('packageBonusInput').value = '0';
+                document.getElementById('packagePriceInput').value = '';
+                                loadStudentData();
+            }
+        });
+    });
+}
+
+// PERSONEL PİN MODAL İŞLEMLERİ
+let globalPinCallback = null;
+function promptPIN(callback) {
+    globalPinCallback = callback;
+    document.getElementById('globalPinInput').value = '';
+    document.getElementById('pinModalBg').style.display = 'flex';
+    setTimeout(() => document.getElementById('globalPinInput').focus(), 100);
+}
+function closeGlobalPin() {
+    document.getElementById('pinModalBg').style.display = 'none';
+    globalPinCallback = null;
+}
+function verifyGlobalPin() {
+    const pin = document.getElementById('globalPinInput').value;
+    if (!pin || pin.length !== 4) return alert("Lütfen 4 haneli şifrenizi giriniz.");
+    
+    fetch('/api/staff/verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pin })
+    }).then(r => r.json()).then(res => {
+        if (res.success) {
+            const cb = globalPinCallback;
+            closeGlobalPin();
+            if (cb) cb(res.name);
+        } else { 
+            alert(res.message); 
+        }
+    }).catch(err => alert("Bağlantı hatası: " + err.message));
+}
+
+document.getElementById('globalPinInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        verifyGlobalPin();
+    }
+});
+</script>
+</body>
+</html>

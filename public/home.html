@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Üreten Çocuk Operasyon</title>
+<style>
+body{font-family:Arial, sans-serif; background:#f4f4f4;margin:0; padding: 24px;color:#111}
+.wrap{max-width: 860px; margin:auto} h1{font-size: 38px; margin:0 0 8px}
+.sub{color:#666; margin-bottom: 24px; font-size:18px}
+.grid{display:grid; grid-template-columns: repeat(2,1fr); gap:16px}
+.btn{display:block; text-decoration:none; background:#fff;color:#111; border-radius:16px; padding:20px; font-size:22px; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.05); cursor:pointer}
+.btn:active{transform: scale(0.98)}
+.btn small{display:block;color:#777;font-size: 15px; font-weight: 400; margin-top:8px}
+@media (max-width: 650px){.grid{grid-template-columns:1fr}h1{font-size:30px}}
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items:center; justify-content:center; z-index:99; }
+.modal { background: #fff; border-radius: 22px; padding: 24px; max-width: 600px; width:100%; box-sizing:border-box; max-height:90vh; overflow-y:auto; }
+.tab-btn { padding: 12px; border: none; border-radius: 10px; background:#e5e7eb; font-weight:bold; cursor:pointer; font-size:15px; }
+.tab-btn.active { background: #111; color:#fff; }
+.admin-form label { display:block; margin-top: 10px; font-size: 14px; color:#555; font-weight:bold; }
+.admin-form input, .admin-form textarea { width:100%; box-sizing: border-box; padding: 12px; margin-top:4px; border-radius: 10px; border:1px solid #ddd; }
+.action-btn { width: 100%; border:none; border-radius: 12px; padding: 15px; font-weight:bold; color:#fff; margin-top:15px; cursor:pointer; }
+.btn-green { background:#15803d; } .btn-blue { background: #1d4ed8; } .btn-gray { background: #6b7280; } .btn-red { background:#c62828; }
+.staff-item { padding:10px; background:#f9f9f9; border:1px solid #ddd; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Üreten Çocuk Operasyon</h1>
+  <div class="sub">Dramatik Oyun • RFID • Hak • Paket • Tahsilat</div>
+  <div class="grid">
+    <a class="btn" href="/inside.html">İçeridekiler<small>Canlı süre, uyarı, çıkış işlemleri</small></a>
+    <a class="btn" href="/new.html">Yeni Çocuk Kaydı<small>Yeni çocuk oluştur ve işlem yap</small></a>
+    <a class="btn" href="/students.html">Tüm Öğrenciler<small>Kayıtlı öğrenci listesi ve arama</small></a>
+    
+    <a class="btn" href="#" onclick="openRightsWithPin(event)">Hak & Paket Yönetimi<small>Telafi tanımla, paket sat</small></a>
+    <a class="btn" href="#" onclick="openReports(event)">Raporlar<small>Gün sonu ve Excel Dışa Aktarım</small></a>
+    <button class="btn" onclick="openAdminWithPin()" style="background:#e0f2fe; border:2px solid #bae6fd; text-align:left;">Yönetim Paneli<small>Fiyat, Personel, Süre ayarları</small></button>
+  </div>
+</div>
+
+<!-- YÖNETİCİ MODALI -->
+<div class="modal-bg" id="adminBg">
+  <div class="modal">
+    <h2 style="margin-top:0;">Yönetici Paneli</h2>
+    <div style="display: flex; gap:10px; margin-bottom:20px;">
+      <button id="tabSettingsBtn" class="tab-btn active" onclick="switchAdminTab('settings')">Fiyat & Ayar</button>
+      <button id="tabStaffBtn" class="tab-btn" onclick="switchAdminTab('staff')">Personel</button>
+      <button id="tabStudentsBtn" class="tab-btn" onclick="switchAdminTab('students')">Öğrenci Düzenle</button>
+      <button id="tabBonusBtn" class="tab-btn" onclick="switchAdminTab('bonus')">Bonus Paketler</button>
+    </div>
+    
+    <div id="adminSettings" class="admin-form">
+      <label>İlk 30 Dk Ücreti (TL)</label>
+      <input type="number" id="baseRateInput">
+      <label>İlk 1 Saat (31-60 Dk) Ücreti (TL)</label>
+      <input type="number" id="hourlyRateInput">
+      <label>Sonraki Her 30 Dk Ücreti (TL)</label>
+      <input type="number" id="extraRateInput">
+      <label>Telafi Hakkı Otomatik Kullanım Süresi (Gün)</label>
+      <input type="number" id="telafiExpiryDaysInput" value="30">
+      <label>Paket Otomatik Kullanım Süresi (Gün)</label>
+      <input type="number" id="packageExpiryDaysInput" value="30">
+      <label>Çıkış Toleransı (Dakika)</label>
+      <input type="number" id="exitToleranceInput" value="5">
+      
+      <div style="background:#eff6ff; padding:15px; border-radius:10px; margin-top:15px; margin-bottom:15px; border: 1px solid #bfdbfe;">
+        <h4 style="margin:0 0 10px 0; color:#1e3a8a;">Telegram Bildirim Ayarları</h4>
+        <label style="margin-top:0;">Telegram Bot Token</label>
+        <input type="text" id="telegramTokenInput" placeholder="Örn: 123456:ABC-DEF..." autocomplete="off">
+        <label>Telegram Chat ID</label>
+        <input type="text" id="telegramChatIdInput" placeholder="Örn: 123456789" autocomplete="off">
+      </div>
+      
+      <button class="action-btn btn-green" onclick="saveSettings()">AYARLARI KAYDET</button>
+    </div>
+    
+    <div id="adminStaff" class="admin-form" style="display:none;">
+       <div style="background:#f3f4f6; padding: 15px; border-radius:10px; margin-bottom:15px;">
+         <h4 style="margin:0 0 10px 0;">Yeni Personel Ekle</h4>
+         <label>Personel Adı</label><input type="text" id="staffNameInput" placeholder="Örn: Ahmet Y." autocomplete="off">
+         <label>4 Haneli PIN</label>
+         <input type="tel" id="staffPinInput" maxlength="4" placeholder="****" autocomplete="off" style="-webkit-text-security: disc;">
+         <button class="action-btn btn-blue" onclick="addStaff()">PERSONEL EKLE</button>
+       </div>
+       <h4 style="margin:0 0 10px 0;">Kayıtlı Personeller</h4>
+       <div id="staffListArea"></div>
+    </div>
+    
+    <div id="adminStudents" class="admin-form" style="display:none;">
+      <input id="adminSearch" placeholder="Öğrenci Ara (İsim, ID, Telefon, RFID)" autocomplete="off" onkeyup="searchAdminStudent()">
+      <div id="adminSearchResults" style="max-height: 160px; overflow-y:auto; background:#f9fafb; margin-top:10px;"></div>
+      <div id="adminEditForm" style="display:none; margin-top: 15px; border-top:2px solid #eee; padding-top:15px;">
+        <input type="hidden" id="editChildId">
+        <label>Öğrenci Adı</label><input id="editStudentName" autocomplete="off">
+        <label>Cari Türü</label><input id="editCari" autocomplete="off">
+        <label>Veli Adı</label><input id="editParentName" autocomplete="off">
+        <label>Veli Telefon</label><input id="editParentPhone" autocomplete="off">
+        <label>Doğum Tarihi</label><input type="date" id="editBirth">
+        <label>RFID Kart ID</label><input id="editRfid" autocomplete="off">
+        <label>Not / Alerji</label><textarea id="editNote"></textarea>
+        <div style="background:#f3f4f6; padding: 12px; border-radius: 10px; margin-top:15px;">
+          <h4 style="margin:0 0 8px 0; color: #111;">Bakiye / Hak Düzenle</h4>
+          <label>Aktif Oyun Alanı Telafi Bakiyesi (Dakika)</label>
+          <input type="number" id="editTelafiMinutes" min="0" value="0">
+          <label style="color:#b91c1c;">Aktif Telafi Dersi Hakkı (Adet)</label>
+          <input type="number" id="editTelafiDersiCount" min="0" value="0">
+          <label>Aktif Paket Bakiyesi (Dakika)</label>
+          <input type="number" id="editPackageMinutes" min="0" value="0">
+        </div>
+        <button class="action-btn btn-blue" onclick="saveAdminStudent()">KAYDİ GÜNCELLE</button>
+        <button class="action-btn btn-red" onclick="deleteAdminStudent()" style="background:#b91c1c; margin-top:8px;">ÖĞRENCİYİ SİL</button>
+      </div>
+    </div>
+    
+    
+    <div id="adminBonus" class="admin-form" style="display:none;">
+       <div style="background:#f3f4f6; padding: 15px; border-radius:10px; margin-bottom:15px;">
+         <h4 style="margin:0 0 10px 0;">Yeni Bonus Paket Ekle</h4>
+         <label>Satış Tutarı (TL)</label><input type="number" id="bonusSalesInput" placeholder="Örn: 5000">
+         <label>Bonus Tutarı (TL)</label><input type="number" id="bonusAmountInput" placeholder="Örn: 5000">
+         <button class="action-btn btn-blue" onclick="addBonusPackage()">PAKET EKLE</button>
+       </div>
+       <h4 style="margin:0 0 10px 0;">Kayıtlı Bonus Paketler</h4>
+       <div id="bonusListArea"></div>
+    </div>
+    <button class="action-btn btn-gray" onclick="closeAdmin()">Kapat</button>
+  </div>
+</div>
+
+<!-- PATRON ŞİFRESİ MODALI -->
+<div class="modal-bg" id="bossPinModalBg" style="z-index:9999;">
+  <div class="modal" style="max-width:320px; text-align:center; padding:30px 20px;">
+    <h3 id="bossPinTitle" style="margin-top:0; color:#111;">Patron Şifresi</h3>
+    <p style="font-size:14px; color:#666;">Bu menüye giriş izne tabidir.</p>
+    <input type="tel" id="bossPinInput" maxlength="4" autocomplete="off" style="-webkit-text-security: disc; font-size:32px; text-align:center; letter-spacing:15px; width:100%; box-sizing:border-box; padding:15px; border-radius:12px; border:2px solid #ccc; margin-bottom:20px;">
+    <div style="display:flex; gap:10px;">
+      <button style="flex:1; border:none; padding:15px; border-radius:12px; background:#b91c1c; color:#fff; font-weight:bold; font-size:16px; cursor:pointer;" onclick="verifyBossPin()">GİRİŞ</button>
+      <button style="flex:1; border:none; padding:15px; border-radius:12px; background:#6b7280; color:#fff; font-weight:bold; font-size:16px; cursor:pointer;" onclick="closeBossPin()">İPTAL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let rfidBuffer = ""; let rfidTimer;
+document.addEventListener("keydown", function(e) {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  if (e.key === "Enter") {
+    if (rfidBuffer.length > 3) handleHomeRfidScan(rfidBuffer);
+    rfidBuffer = "";
+  } else if (e.key.length === 1) {
+    rfidBuffer += e.key;
+    clearTimeout(rfidTimer);
+    rfidTimer = setTimeout(() => rfidBuffer = "", 500);
+  }
+});
+
+function handleHomeRfidScan(rfid) {
+  fetch('/api/rfid/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rfid_id: rfid }) })
+    .then(res => res.json()).then(data => {
+      if (!data.success) alert(data.message);
+      else window.location.href = '/index.html?id=' + encodeURIComponent(data.child_id);
+    }).catch(err => alert("Hata: " + err.message));
+}
+
+let bossPinResolve = null;
+let allowStaffLogin = false;
+function promptBossPIN(allowStaff = false) {
+    allowStaffLogin = allowStaff;
+    return new Promise((resolve) => {
+        bossPinResolve = resolve;
+        document.getElementById('bossPinTitle').innerText = allowStaff ? "Yetkili Şifresi" : "Patron Şifresi";
+        document.getElementById('bossPinInput').value = '';
+        document.getElementById('bossPinModalBg').style.display = 'flex';
+        setTimeout(() => document.getElementById('bossPinInput').focus(), 100);
+    });
+}
+
+function closeBossPin() {
+    document.getElementById('bossPinModalBg').style.display = 'none';
+    if (bossPinResolve) {
+        bossPinResolve(false);
+        bossPinResolve = null;
+    }
+}
+
+function verifyBossPin() {
+    const pin = document.getElementById('bossPinInput').value;
+    if (pin === "2346") {
+        document.getElementById('bossPinModalBg').style.display = 'none';
+        if (bossPinResolve) { const res = bossPinResolve; bossPinResolve = null; res(true); }
+    } else if (allowStaffLogin) {
+        fetch('/api/staff/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pin }) })
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                document.getElementById('bossPinModalBg').style.display = 'none';
+                if (bossPinResolve) { const cb = bossPinResolve; bossPinResolve = null; cb(true); }
+            } else { alert("Hatalı Şifre!"); document.getElementById('bossPinInput').value = ''; }
+        }).catch(err => alert("Hata: " + err.message));
+    } else {
+        alert("Hatalı Patron Şifresi!");
+        document.getElementById('bossPinInput').value = '';
+    }
+}
+
+document.getElementById('bossPinInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        verifyBossPin();
+    }
+});
+
+async function openReports(e) {
+    e.preventDefault();
+    const success = await promptBossPIN();
+    if (success) window.location.assign('/reports.html');
+}
+
+async function openRightsWithPin(e) {
+    e.preventDefault();
+    const success = await promptBossPIN(true);
+    if (success) window.location.assign('/rights.html');
+}
+
+async function openAdminWithPin() {
+    const success = await promptBossPIN();
+    if (success) openAdmin();
+}
+
+function openAdmin() {
+  document.getElementById('adminBg').style.display = 'flex';
+  switchAdminTab('settings');
+  fetch('/api/settings').then(res => res.json()).then(r => {
+    if (r.success){
+      document.getElementById('baseRateInput').value = r.settings.base_rate;
+      document.getElementById('hourlyRateInput').value = r.settings.hourly_rate;
+      document.getElementById('extraRateInput').value = r.settings.extra_rate;
+      document.getElementById('telafiExpiryDaysInput').value = r.settings.telafi_expiry_days || 30;
+      document.getElementById('packageExpiryDaysInput').value = r.settings.package_expiry_days || 30;
+      document.getElementById('exitToleranceInput').value = r.settings.exit_tolerance_minutes ?? 5;
+      document.getElementById('telegramTokenInput').value = r.settings.telegram_token || '';
+      document.getElementById('telegramChatIdInput').value = r.settings.telegram_chat_id || '';
+    }
+  });
+  loadStaff();
+  loadBonusPackages();
+}
+
+function closeAdmin() { document.getElementById('adminBg').style.display = 'none'; }
+
+function switchAdminTab(tab) {
+  document.getElementById('adminSettings').style.display = tab === 'settings' ? 'block' : 'none';
+  document.getElementById('adminStaff').style.display = tab === 'staff' ? 'block' : 'none';
+  document.getElementById('adminStudents').style.display = tab === 'students' ? 'block' : 'none';
+  document.getElementById('adminBonus').style.display = tab === 'bonus' ? 'block' : 'none';
+  document.getElementById('tabSettingsBtn').className = tab === 'settings' ? 'tab-btn active' : 'tab-btn';
+  document.getElementById('tabStaffBtn').className = tab === 'staff' ? 'tab-btn active' : 'tab-btn';
+  document.getElementById('tabStudentsBtn').className = tab === 'students' ? 'tab-btn active' : 'tab-btn';
+  document.getElementById('tabBonusBtn').className = tab === 'bonus' ? 'tab-btn active' : 'tab-btn';
+}
+
+function saveSettings() {
+  fetch('/api/settings/update', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+        base_rate: document.getElementById('baseRateInput').value, 
+        hourly_rate: document.getElementById('hourlyRateInput').value,
+        extra_rate: document.getElementById('extraRateInput').value,
+        telafi_expiry_days: document.getElementById('telafiExpiryDaysInput').value,
+        package_expiry_days: document.getElementById('packageExpiryDaysInput').value,
+        exit_tolerance_minutes: document.getElementById('exitToleranceInput').value,
+        telegram_token: document.getElementById('telegramTokenInput').value,
+        telegram_chat_id: document.getElementById('telegramChatIdInput').value
+    })
+  }).then(res=>res.json()).then(r => alert(r.message));
+}
+
+
+function loadBonusPackages() {
+    fetch('/api/bonus-packages').then(r=>r.json()).then(data => {
+        if(data.success) {
+            document.getElementById('bonusListArea').innerHTML = data.packages.map(p => 
+                '<div class="staff-item"><b>' + p.sales_amount + ' TL + ' + p.bonus_amount + ' TL Bonus</b><button class="action-btn btn-red" style="width:auto; padding:5px 10px; margin:0;" onclick="deleteBonusPackage(' + p.id + ')">SİL</button></div>'
+            ).join('') || '<p style="color:#777; font-size:14px;">Paket bulunamadı.</p>';
+        }
+    });
+}
+function addBonusPackage() {
+    const sales = document.getElementById('bonusSalesInput').value;
+    const bonus = document.getElementById('bonusAmountInput').value;
+    fetch('/api/bonus-packages/add', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({sales, bonus})
+    }).then(r=>r.json()).then(res => { if(res.success) { document.getElementById('bonusSalesInput').value=''; document.getElementById('bonusAmountInput').value=''; loadBonusPackages(); } });
+}
+function deleteBonusPackage(id) {
+    if(confirm("Silmek istediğinize emin misiniz?")) {
+        fetch('/api/bonus-packages/delete', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id}) }).then(()=>loadBonusPackages());
+    }
+}
+
+function loadStaff() {
+    fetch('/api/staff').then(r=>r.json()).then(data => {
+        if(data.success) {
+            document.getElementById('staffListArea').innerHTML = data.staff.map(s => 
+                '<div class="staff-item"><b>' + s.name + '</b><button class="action-btn btn-red" style="width:auto; padding:5px 10px; margin:0;" onclick="deleteStaff(\'' + s.pin + '\')">SİL</button></div>'
+            ).join('') || '<p style="color:#777; font-size:14px;">Personel bulunamadı.</p>';
+        }
+    });
+}
+
+function addStaff() {
+    const name = document.getElementById('staffNameInput').value;
+    const pin = document.getElementById('staffPinInput').value;
+    fetch('/api/staff/add', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name, pin})
+    }).then(r=>r.json()).then(res => {
+        alert(res.message);
+        if(res.success) { document.getElementById('staffNameInput').value=''; document.getElementById('staffPinInput').value=''; loadStaff();
+  loadBonusPackages(); }
+    });
+}
+
+function deleteStaff(pin) {
+    if(confirm("Personeli silmek istediğinize emin misiniz?")) {
+        fetch('/api/staff/delete', {
+            method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({pin})
+        }).then(()=>loadStaff());
+    }
+}
+
+function searchAdminStudent() {
+  const q = document.getElementById('adminSearch').value;
+  const resDiv = document.getElementById('adminSearchResults');
+  if(q.length < 2) { resDiv.innerHTML = ''; return; }
+  fetch('/api/students/search?q=' + encodeURIComponent(q)).then(res => res.json()).then(r => {
+    resDiv.innerHTML = (r.students||[]).map(x => '<div style="padding:10px; border-bottom:1px solid #ddd; cursor:pointer;" onclick="loadAdminStudent(\'' + x.child_id + '\')">' + x.student_name + ' - ' + x.parent_phone + '</div>').join('');
+  });
+}
+
+function loadAdminStudent(childId) {
+  document.getElementById('adminSearchResults').innerHTML = '';
+  document.getElementById('adminSearch').value = '';
+  fetch('/api/students/get/' + encodeURIComponent(childId)).then(res => res.json()).then(r => {
+    if(!r.success) { alert(r.message); return; }
+    const st = r.student;
+    document.getElementById('adminEditForm').style.display = 'block';
+    document.getElementById('editChildId').value = st.child_id;
+    document.getElementById('editStudentName').value = st.student_name;
+    document.getElementById('editCari').value = st.cari_turu || '';
+    document.getElementById('editParentName').value = st.parent_name || '';
+    document.getElementById('editParentPhone').value = st.parent_phone || '';
+    document.getElementById('editBirth').value = st.birth_date || '';
+    document.getElementById('editRfid').value = st.rfid_id || '';
+    document.getElementById('editNote').value = st.note || '';
+    document.getElementById('editTelafiMinutes').value = st.rights_summary ? st.rights_summary.telafi_minutes : 0;
+    document.getElementById('editTelafiDersiCount').value = st.rights_summary ? st.rights_summary.telafi_dersi_count : 0;
+    document.getElementById('editPackageMinutes').value = st.rights_summary ? st.rights_summary.package_minutes : 0;
+  });
+}
+
+function saveAdminStudent() {
+  fetch('/api/students/edit', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      child_id: document.getElementById('editChildId').value,
+      student_name: document.getElementById('editStudentName').value,
+      cari_turu: document.getElementById('editCari').value,
+      parent_name: document.getElementById('editParentName').value,
+      parent_phone: document.getElementById('editParentPhone').value,
+      birth_date: document.getElementById('editBirth').value,
+      rfid_id: document.getElementById('editRfid').value,
+      note: document.getElementById('editNote').value,
+      telafi_minutes: document.getElementById('editTelafiMinutes').value,
+      telafi_dersi_count: document.getElementById('editTelafiDersiCount').value,
+      package_minutes: document.getElementById('editPackageMinutes').value
+    })
+  }).then(res=>res.json()).then(r => { alert(r.message); if (r.success) document.getElementById('adminEditForm').style.display = 'none'; });
+}
+
+function deleteAdminStudent() {
+    const childId = document.getElementById('editChildId').value;
+    const studentName = document.getElementById('editStudentName').value;
+    
+    if (!confirm(`"${studentName}" adlı öğrenciyi silmek istediğinize emin misiniz?`)) return;
+    if (!confirm(`DİKKAT: Bu işlem geri alınamaz! Öğrenciye ait tüm geçmiş loglar, haklar ve kayıtlar kalıcı olarak silinecek. Onaylıyor musunuz?`)) return;
+    
+    fetch('/api/students/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ child_id: childId })
+    }).then(res => res.json()).then(r => {
+        alert(r.message);
+        if (r.success) document.getElementById('adminEditForm').style.display = 'none';
+    }).catch(err => alert("Hata: " + err.message));
+}
+</script>
+</body>
+</html>
