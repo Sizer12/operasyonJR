@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Öğrenci Profili</title>
+<style>
+body{font-family:Arial, sans-serif; background:#f4f4f4;margin:0; padding: 24px;color:#111; display:flex; justify-content:center;}
+.card { background:#fff; border-radius:16px; padding:30px; max-width:600px; width:100%; box-shadow:0 4px 10px rgba(0,0,0,0.05); }
+.btn-menu { background:#111; color:#fff; padding:8px 16px; border-radius:8px; text-decoration:none; font-size:14px; font-weight:bold; display:inline-block; margin-bottom:20px; }
+h1 { margin:0 0 20px 0; font-size:32px; }
+.info-line { margin-bottom: 8px; font-size:16px; }
+.info-line b { color:#333; }
+.rights-box { background:#f3f4f6; padding: 15px; border-radius:10px; margin-top:20px; margin-bottom:20px; }
+.btn { display:block; width:100%; padding:15px; text-align:center; text-decoration:none; border-radius:10px; font-weight:bold; font-size:16px; border:none; cursor:pointer; margin-bottom:10px; box-sizing:border-box;}
+.btn-green { background:#15803d; color:#fff; }
+.btn-gray { background:#4b5563; color:#fff; }
+.btn-blue { background:#1d4ed8; color:#fff; }
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items:center; justify-content:center; z-index:99; }
+.modal { background: #fff; border-radius: 22px; padding: 24px; max-width: 320px; width:100%; box-sizing:border-box; text-align:center;}
+
+#printArea { display: none; }
+@media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 10px; }
+}
+</style>
+</head>
+<body>
+<div class="card">
+    <a href="/home.html" class="btn-menu">Ana Menü</a>
+    <h1 id="sName">-</h1>
+    <div class="info-line"><b>ID:</b> <span id="sId">-</span></div>
+    <div class="info-line"><b>Cari Türü:</b> <span id="sCari">-</span></div>
+    <div class="info-line"><b>Yaş:</b> <span id="sAge">-</span></div>
+    <div class="info-line"><b>Veli Adı:</b> <span id="sParent">-</span></div>
+    <div class="info-line"><b>Telefon:</b> <span id="sPhone">-</span></div>
+    <div class="info-line"><b>Kayıt:</b> <span id="sDate">-</span></div>
+    <div class="info-line"><b>RFID:</b> <span id="sRfid">-</span></div>
+    <div class="info-line"><b>Not:</b> <span id="sNote">-</span></div>
+    
+    <div class="rights-box">
+        <div style="margin-bottom:5px;"><b>Mevcut Oyun Alanı Telafisi:</b> <span id="sOyunTelafi" style="font-weight:bold;">0 Dk</span></div>
+        <div style="margin-bottom:5px; color:#b91c1c;"><b>Mevcut Telafi Dersi:</b> <span id="sDersTelafi" style="font-weight:bold;">0 Saat</span></div>
+        <div><b>Mevcut Paket:</b> <span id="sPaket" style="font-weight:bold;">0 Dk</span></div>
+    </div>
+    
+    <div id="actionArea">
+        <button class="btn btn-green" id="btnStart" onclick="startEntry()">GİRİŞ BAŞLAT</button>
+        <button class="btn btn-blue" onclick="printActiveStatus()">ÖĞRENCİ ANLIK DURUMUNU YAZDIR</button>
+    </div>
+</div>
+
+<div id="printArea"></div>
+
+<!-- ÇIKIŞ İŞLEM MODALI -->
+<div class="modal-bg" id="exitModalBg" style="z-index:90;">
+  <div class="modal" style="max-width: 400px;">
+    <h3 id="modalStudentName" style="margin-top:0;">-</h3>
+    <div style="font-size:15px; color:#445; margin-bottom:15px;">
+      Geçen Süre: <b id="modalDuration" style="color:#000;">0dk</b><br>
+      Tutar: <b id="modalFee" style="color:#b91c1c; font-size:18px;">0 TL</b>
+    </div>
+    
+    <button class="btn" style="background:#15803d;" onclick="finalizeExit('NAKİT')">Nakit Alındı (<span class="feeText">0</span> TL)</button>
+    <button class="btn" style="background:#1d4ed8;" onclick="finalizeExit('KREDİ KARTI')">Kart Alındı (<span class="feeText">0</span> TL)</button>
+    <button class="btn" style="background:#8b5cf6;" id="btnHak" onclick="finalizeExit('HAK')">Telafi Kullan (0 Dk)</button>
+    <button class="btn" style="background:#7c3aed;" id="btnPaket" onclick="finalizeExit('PAKET')">Paketten Düş (0 TL)</button>
+    
+    <button class="btn" style="background:#6b7280; margin-top:20px;" onclick="openCancelModal()">VAZGEÇTİ / İPTAL</button>
+    <button class="btn" style="background:#4b5563; margin-top:10px;" onclick="closeExitModal()">Kapat</button>
+  </div>
+</div>
+
+<!-- VAZGEÇTİ MAZERET MODALI -->
+<div class="modal-bg" id="cancelModalBg" style="z-index:99;">
+  <div class="modal" style="max-width:350px;">
+    <h3 style="margin-top:0;">İptal / Vazgeçme Nedeni</h3>
+    <textarea id="cancelReasonInput" rows="3" style="width:100%; box-sizing:border-box; padding:10px; border-radius:10px; border:1px solid #ccc; font-family:inherit;" placeholder="Lütfen geçerli bir iptal nedeni yazınız..."></textarea>
+    <div style="display:flex; gap:10px; margin-top:15px;">
+      <button style="flex:1; border:none; padding:12px; border-radius:10px; background:#b91c1c; color:#fff; font-weight:bold; cursor:pointer;" onclick="finalizeCancel()">ONAYLA</button>
+      <button style="flex:1; border:none; padding:12px; border-radius:10px; background:#6b7280; color:#fff; font-weight:bold; cursor:pointer;" onclick="closeCancelModal()">GERİ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Personel Şifresi Modalı -->
+<div class="modal-bg" id="pinModalBg" style="z-index:9999;">
+  <div class="modal">
+    <h3 style="margin-top:0; color:#111;">Personel Şifresi</h3>
+    <p style="font-size:14px; color:#666;">İşlemi onaylamak için 4 haneli PIN girin.</p>
+    <input type="tel" id="globalPinInput" maxlength="4" autocomplete="off" style="-webkit-text-security: disc; font-size:32px; text-align:center; letter-spacing:15px; margin-bottom:20px; width:100%; box-sizing:border-box; padding:15px; border-radius:12px; border:2px solid #ccc;">
+    <div style="display:flex; gap:10px;">
+      <button style="flex:1; border:none; padding:15px; border-radius:12px; background:#15803d; color:#fff; font-weight:bold; cursor:pointer;" onclick="verifyGlobalPin()">ONAYLA</button>
+      <button style="flex:1; border:none; padding:15px; border-radius:12px; background:#6b7280; color:#fff; font-weight:bold; cursor:pointer;" onclick="closeGlobalPin()">İPTAL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const childId = urlParams.get('id');
+    let studentGlobalData = null;
+    let activeLogData = null;
+    
+    if (!childId) {
+        alert("Öğrenci ID bulunamadı.");
+        window.location.href = '/home.html';
+    } else {
+        loadData();
+    }
+
+    function loadData() {
+        fetch('/api/students/get/' + encodeURIComponent(childId))
+        .then(res => res.json())
+        .then(r => {
+            if (!r.success) {
+                alert(r.message);
+                window.location.href = '/home.html';
+                return;
+            }
+            studentGlobalData = r.student;
+            const st = r.student;
+            document.getElementById('sName').innerText = st.student_name;
+            document.getElementById('sId').innerText = st.child_id;
+            document.getElementById('sCari').innerText = st.cari_turu || '-';
+            document.getElementById('sAge').innerText = st.age;
+            document.getElementById('sParent').innerText = st.parent_name || '-';
+            document.getElementById('sPhone').innerText = st.parent_phone;
+            document.getElementById('sDate').innerText = st.created_at ? new Date(st.created_at).toLocaleDateString('tr-TR') : '-';
+            document.getElementById('sRfid').innerText = st.rfid_id || '-';
+            document.getElementById('sNote').innerText = st.note || '-';
+            
+            const rs = st.rights_summary || {};
+            document.getElementById('sOyunTelafi').innerText = (rs.telafi_minutes || 0) + ' Dk';
+            document.getElementById('sDersTelafi').innerText = (rs.telafi_dersi_count || 0) + ' Saat';
+            document.getElementById('sPaket').innerText = (rs.package_minutes || 0) + ' TL';
+            
+            if (st.inside) {
+                document.getElementById('actionArea').innerHTML = `
+                    <div style="background:#fff7e6;color:#b45309;padding:12px;border-radius:10px;margin-bottom:12px;font-weight:bold;">
+                      ⚠️ Öğrenci şu an içeride! (Giriş: ${st.entry_time})
+                    </div>
+                    <button class="btn btn-blue" onclick="printActiveStatus()">ÖĞRENCİ ANLIK DURUMUNU YAZDIR</button>
+                    <button class="btn" style="background:#b91c1c; color:#fff;" onclick="openExitModal()">ÇIKIŞ YAP VE TAHSİLAT AL</button>
+                `;
+            } else {
+                document.getElementById('actionArea').innerHTML = `
+                    <button class="btn btn-green" onclick="startEntry()">GİRİŞ BAŞLAT</button>
+                `;
+            }
+        });
+
+        fetch('/api/exit/preview/' + encodeURIComponent(childId))
+        .then(res => res.json())
+        .then(r => {
+            if (r.success) {
+                activeLogData = r; 
+            } else {
+                activeLogData = null;
+            }
+        }).catch(() => activeLogData = null);
+    }
+
+    function startEntry() {
+        promptPIN((personelName) => {
+            fetch('/api/entry/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ child_id: childId, personel: personelName })
+            }).then(res => res.json()).then(r => {
+                alert(r.message);
+                if (r.success) {
+                    executeDualPrint("GİRİŞ İŞLEMİ", personelName);
+                    setTimeout(() => window.location.href = '/inside.html', 500);
+                }
+            });
+        });
+    }
+    
+    function openExitModal() {
+        if(!studentGlobalData) return;
+        
+        fetch('/api/exit/preview/' + encodeURIComponent(childId))
+        .then(res => res.json())
+        .then(r => {
+            if (!r.success) return alert(r.message);
+            
+            document.getElementById('modalStudentName').innerText = r.student_name;
+            document.getElementById('modalDuration').innerText = r.sure_dk + ' dk';
+            document.getElementById('modalFee').innerText = r.fee + ' TL';
+            
+            document.querySelectorAll('.feeText').forEach(el => el.innerText = r.fee);
+            
+            document.getElementById('btnHak').innerText = `Telafi Kullan (${r.telafi_minutes || 0} Dk)`;
+            document.getElementById('btnPaket').innerText = `Paketten Düş (${r.package_minutes || 0} TL)`;
+
+            document.getElementById('exitModalBg').style.display = 'flex';
+        }).catch(err => alert("Hata: " + err.message));
+    }
+    
+    function closeExitModal() {
+        document.getElementById('exitModalBg').style.display = 'none';
+    }
+    
+    function openCancelModal() {
+        document.getElementById('exitModalBg').style.display = 'none';
+        document.getElementById('cancelReasonInput').value = '';
+        document.getElementById('cancelModalBg').style.display = 'flex';
+    }
+
+    function closeCancelModal() {
+        document.getElementById('cancelModalBg').style.display = 'none';
+        document.getElementById('exitModalBg').style.display = 'flex';
+    }
+
+    function finalizeCancel() {
+        const reason = document.getElementById('cancelReasonInput').value.trim();
+        if (!reason) return alert("Lütfen mazeret giriniz.");
+        
+        document.getElementById('cancelModalBg').style.display = 'none';
+        
+        promptPIN((personelName) => {
+            fetch('/api/exit/finalize', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ child_id: childId, payment_type: 'VAZGEÇTİ', cancel_reason: reason, personel: personelName })
+            }).then(res => res.json()).then(r => {
+                alert(r.message);
+                if (r.success) loadData();
+            });
+        });
+    }
+
+    function finalizeExit(paymentType) {
+        closeExitModal();
+        promptPIN((personelName) => {
+            fetch('/api/exit/finalize', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ child_id: childId, payment_type: paymentType, personel: personelName })
+            }).then(res => res.json()).then(r => {
+                alert(r.message);
+                if (r.success) loadData();
+            });
+        });
+    }
+
+    function printActiveStatus() {
+        if (!studentGlobalData) return;
+        const st = studentGlobalData;
+
+        if (!st.inside || !activeLogData) {
+            alert("Öğrenci şu anda içeride aktif olarak bulunmuyor.");
+            return;
+        }
+
+        const content = `
+            <div style="text-align:center;">
+                <h3 style="margin:0;">ÜRETEN ÇOCUK</h3>
+                <p style="margin:2px 0; font-size:11px;">Anlık Durum ve Tutar Bilgisi</p>
+            </div>
+            <hr style="border:1px dashed #000; margin:8px 0;">
+            <p><b>Öğrenci:</b> ${st.student_name} (${st.child_id})</p>
+            <p><b>Veli Tel:</b> ${st.parent_phone}</p>
+            <p><b>Giriş Saati:</b> ${st.entry_time || '-'}</p>
+            <p><b>İçerideki Süre:</b> ${activeLogData.sure_dk} dakika</p>
+            <p><b>Güncel Tutar:</b> <span style="font-size:16px;"><b>${activeLogData.fee} TL</b></span></p>
+        `;
+        document.getElementById('printArea').innerHTML = content;
+        window.print();
+    }
+
+    function executeDualPrint(actionName, personel) {
+        if (!studentGlobalData) return;
+        const st = studentGlobalData;
+        const timeNow = new Date().toLocaleString('tr-TR');
+
+        const slipHtml = `
+            <div style="text-align:center;">
+                <h3 style="margin:0;">ÜRETEN ÇOCUK</h3>
+                <p style="margin:2px 0; font-size:11px;">Atölye & Oyun Alanı Operasyonu</p>
+            </div>
+            <hr style="border:1px dashed #000; margin:8px 0;">
+            <p style="margin:4px 0;"><b>İşlem:</b> ${actionName}</p>
+            <p style="margin:4px 0;"><b>Tarih:</b> ${timeNow}</p>
+            <p style="margin:4px 0;"><b>Öğrenci:</b> ${st.student_name} (${st.child_id})</p>
+            <p style="margin:4px 0;"><b>Veli Tel:</b> ${st.parent_phone}</p>
+            <p style="margin:4px 0;"><b>Personel:</b> ${personel || 'Sistem'}</p>
+        `;
+
+        document.getElementById('printArea').innerHTML = `
+            <div style="page-break-after: always; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #000;">
+                <div style="font-size:10px; font-weight:bold; text-align:right;">[ 1. KOPYA - KASA KOPYASI ]</div>
+                ${slipHtml}
+            </div>
+            <div>
+                <div style="font-size:10px; font-weight:bold; text-align:right;">[ 2. KOPYA - OYUN ALANI KOPYASI ]</div>
+                ${slipHtml}
+            </div>
+        `;
+        window.print();
+    }
+
+    let globalPinCallback = null;
+    function promptPIN(callback) {
+        globalPinCallback = callback;
+        document.getElementById('globalPinInput').value = '';
+        document.getElementById('pinModalBg').style.display = 'flex';
+        setTimeout(() => document.getElementById('globalPinInput').focus(), 100);
+    }
+    function closeGlobalPin() {
+        document.getElementById('pinModalBg').style.display = 'none';
+        globalPinCallback = null;
+    }
+    function verifyGlobalPin() {
+        const pin = document.getElementById('globalPinInput').value;
+        if (!pin || pin.length !== 4) return alert("Lütfen 4 haneli şifrenizi giriniz.");
+        
+        fetch('/api/staff/verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pin })
+        }).then(r => r.json()).then(res => {
+            if (res.success) {
+                const cb = globalPinCallback;
+                closeGlobalPin();
+                if (cb) cb(res.name);
+            } else { 
+                alert(res.message); 
+            }
+        }).catch(err => alert("Bağlantı hatası: " + err.message));
+    }
+
+    document.getElementById('globalPinInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            verifyGlobalPin();
+        }
+    });
+</script>
+</body>
+</html>

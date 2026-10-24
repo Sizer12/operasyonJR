@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>İçerideki Öğrenciler</title>
+<style>
+body{font-family:Arial, sans-serif; background:#f4f4f4;margin:0; padding: 24px;color:#111}
+.wrap{max-width: 900px; margin:auto} 
+h1{font-size: 32px; margin:0 0 20px 0}
+.grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:16px; }
+.card { background:#fff; border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05); position:relative; border-left: 6px solid #15803d; }
+.card.warning { border-left-color: #ca8a04; }
+.card.alarm { border-left-color: #b91c1c; }
+.name { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+.info { font-size: 14px; color: #555; margin-bottom: 4px; }
+.time-box { background: #f3f4f6; padding: 10px; border-radius: 8px; margin: 12px 0; display:flex; justify-content:space-between; align-items:center; }
+.btn { width: 100%; border:none; border-radius: 10px; padding: 12px; font-weight:bold; color:#fff; cursor:pointer; font-size:15px; margin-top:6px; }
+.btn-exit { background: #b91c1c; }
+.btn-print { background: #1d4ed8; }
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items:center; justify-content:center; z-index:99; }
+.modal { background: #fff; border-radius: 22px; padding: 24px; max-width: 400px; width:100%; box-sizing:border-box; text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <h1>İçerideki Öğrenciler</h1>
+    <a href="/home.html" style="background:#111; color:#fff; padding:10px 16px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:14px;">Ana Menü</a>
+  </div>
+  
+  <div id="childrenGrid" class="grid"></div>
+</div>
+
+<!-- ÇIKIŞ İŞLEM MODALI -->
+<div class="modal-bg" id="exitModalBg">
+  <div class="modal">
+    <h3 id="modalStudentName" style="margin-top:0;">-</h3>
+    <div style="font-size:15px; color:#445; margin-bottom:15px;">
+      Geçen Süre: <b id="modalDuration" style="color:#000;">0dk</b><br>
+      Tutar: <b id="modalFee" style="color:#b91c1c; font-size:18px;">0 TL</b>
+    </div>
+    
+    <button class="btn" style="background:#15803d;" onclick="finalizeExit('NAKİT')">Nakit Alındı (<span class="feeText">0</span> TL)</button>
+    <button class="btn" style="background:#1d4ed8;" onclick="finalizeExit('KREDİ KARTI')">Kart Alındı (<span class="feeText">0</span> TL)</button>
+    <button class="btn" style="background:#8b5cf6;" id="btnHak" onclick="finalizeExit('HAK')">Telafi Kullan (0 Dk)</button>
+    <button class="btn" style="background:#7c3aed;" id="btnPaket" onclick="finalizeExit('PAKET')">Paketten Düş (0 TL)</button>
+    
+    <button class="btn" style="background:#6b7280; margin-top:20px;" onclick="openCancelModal()">VAZGEÇTİ / İPTAL</button>
+    <button class="btn" style="background:#4b5563; margin-top:10px;" onclick="closeExitModal()">Kapat</button>
+  </div>
+</div>
+
+<!-- VAZGEÇTİ MAZERET MODALI -->
+<div class="modal-bg" id="cancelModalBg" style="z-index:999;">
+  <div class="modal" style="max-width:350px;">
+    <h3 style="margin-top:0;">İptal / Vazgeçme Nedeni</h3>
+    <textarea id="cancelReasonInput" rows="3" style="width:100%; box-sizing:border-box; padding:10px; border-radius:10px; border:1px solid #ccc; font-family:inherit;" placeholder="Lütfen geçerli bir iptal nedeni yazınız..."></textarea>
+    <div style="display:flex; gap:10px; margin-top:15px;">
+      <button style="flex:1; border:none; padding:12px; border-radius:10px; background:#b91c1c; color:#fff; font-weight:bold; cursor:pointer;" onclick="finalizeCancel()">ONAYLA</button>
+      <button style="flex:1; border:none; padding:12px; border-radius:10px; background:#6b7280; color:#fff; font-weight:bold; cursor:pointer;" onclick="closeCancelModal()">GERİ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Personel Şifresi Modalı -->
+<div class="modal-bg" id="pinModalBg" style="z-index:9999;">
+  <div class="modal">
+    <h3 style="margin-top:0; color:#111;">Personel Şifresi</h3>
+    <p style="font-size:14px; color:#666;">İşlemi onaylamak için 4 haneli PIN girin.</p>
+    <input type="tel" id="globalPinInput" maxlength="4" autocomplete="off" style="-webkit-text-security: disc; font-size:32px; text-align:center; letter-spacing:15px; margin-bottom:20px; width:100%; box-sizing:border-box; padding:15px; border-radius:12px; border:2px solid #ccc;">
+    <div style="display:flex; gap:10px;">
+      <button style="flex:1; border:none; padding:15px; border-radius:12px; background:#15803d; color:#fff; font-weight:bold; cursor:pointer;" onclick="verifyGlobalPin()">ONAYLA</button>
+      <button style="flex:1; border:none; padding:15px; border-radius:12px; background:#6b7280; color:#fff; font-weight:bold; cursor:pointer;" onclick="closeGlobalPin()">İPTAL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let activeChildren = [];
+let selectedChildId = null;
+
+function loadInside() {
+    fetch('/api/inside').then(res => res.json()).then(data => {
+        if (!data.success) return;
+        activeChildren = data.children || [];
+        const grid = document.getElementById('childrenGrid');
+        
+        if (activeChildren.length === 0) {
+            grid.innerHTML = '<p style="color:#777; grid-column: 1/-1;">Şu anda içeride kayıtlı öğrenci bulunmuyor.</p>';
+            return;
+        }
+
+        grid.innerHTML = activeChildren.map(c => {
+            let cardClass = 'card';
+            if (c.alarm) cardClass += ' alarm';
+            else if (c.warning) cardClass += ' warning';
+
+            return `
+                <div class="${cardClass}">
+                    <div class="name">${c.student_name}</div>
+                    <div class="info">Veli: ${c.parent_name || '-'} (${c.parent_phone})</div>
+                    <div class="info">Telafi: <b>${c.telafi_minutes || 0} Dk</b> | Paket: <b>${c.package_minutes || 0} TL</b></div>
+                    <div class="time-box">
+                        <div>Giriş: <b>${c.entry_time_fmt}</b></div>
+                        <div>Süre: <b style="font-size:16px;">${c.sure_dk} dk</b></div>
+                    </div>
+                    <div style="font-size:15px; font-weight:bold; margin-bottom:10px;">Tahmini Tutar: <span style="color:#b91c1c;">${c.estimated_fee} TL</span></div>
+                    
+                    <button class="btn" style="background:${c.is_paused ? '#ca8a04' : '#15803d'};" onclick="togglePause('${c.child_id}')">${c.is_paused ? '▶ DEVAM ET' : '⏸ DURAKLAT'}</button>
+                    <button class="btn btn-print" onclick="printCardStatus('${c.child_id}')">ANLIK DURUMU YAZDIR</button>
+                    <button class="btn btn-exit" onclick="openExitModal('${c.child_id}')">ÇIKIŞ YAP / İŞLEM</button>
+                </div>
+            `;
+        }).join('');
+    });
+}
+
+setInterval(loadInside, 10000);
+loadInside();
+
+function togglePause(childId) {
+    fetch('/api/entry/pause-toggle', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ child_id: childId })
+    }).then(res => res.json()).then(r => {
+        if (r.success) loadInside();
+        else alert(r.message);
+    });
+}
+
+function printCardStatus(childId) {
+    const c = activeChildren.find(x => x.child_id === childId);
+    if (!c) return;
+    fetch('/api/print/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(c) })
+        .then(res => res.json()).then(r => { if (r.success) alert("Anlık durum fişi KASA yazıcısına gönderildi."); });
+}
+
+function openExitModal(childId) {
+    selectedChildId = childId;
+    const c = activeChildren.find(x => x.child_id === childId);
+    if (!c) { alert("Öğrenci bilgisi bulunamadı."); return; }
+    
+    // Fetch latest data to ensure package balances are up-to-date
+    fetch('/api/exit/preview/' + encodeURIComponent(childId))
+    .then(res => res.json())
+    .then(r => {
+        if (!r.success) return alert(r.message);
+        
+        document.getElementById('modalStudentName').innerText = r.student_name;
+        document.getElementById('modalDuration').innerText = r.sure_dk + ' dk';
+        document.getElementById('modalFee').innerText = r.fee + ' TL';
+        
+        document.querySelectorAll('.feeText').forEach(el => el.innerText = r.fee);
+        
+        document.getElementById('btnHak').innerText = `Telafi Kullan (${r.telafi_minutes || 0} Dk)`;
+        document.getElementById('btnPaket').innerText = `Paketten Düş (${r.package_minutes || 0} TL)`;
+
+        document.getElementById('exitModalBg').style.display = 'flex';
+    }).catch(err => alert("Hata: " + err.message));
+}
+
+function closeExitModal() {
+    document.getElementById('exitModalBg').style.display = 'none';
+    selectedChildId = null;
+}
+
+function openCancelModal() {
+    document.getElementById('exitModalBg').style.display = 'none';
+    document.getElementById('cancelReasonInput').value = '';
+    document.getElementById('cancelModalBg').style.display = 'flex';
+}
+
+function closeCancelModal() {
+    document.getElementById('cancelModalBg').style.display = 'none';
+    document.getElementById('exitModalBg').style.display = 'flex';
+}
+
+function finalizeCancel() {
+    const reason = document.getElementById('cancelReasonInput').value.trim();
+    if (!reason) return alert("Lütfen mazeret giriniz.");
+    
+    document.getElementById('cancelModalBg').style.display = 'none';
+    const childIdToProcess = selectedChildId;
+    
+    promptPIN((personelName) => {
+        fetch('/api/exit/finalize', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ child_id: childIdToProcess, payment_type: 'VAZGEÇTİ', cancel_reason: reason, personel: personelName })
+        }).then(res => res.json()).then(r => {
+            alert(r.message);
+            if (r.success) loadInside();
+        });
+    });
+}
+
+function finalizeExit(paymentType) {
+    const childIdToProcess = selectedChildId;
+    closeExitModal();
+    
+    promptPIN((personelName) => {
+        fetch('/api/exit/finalize', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ child_id: childIdToProcess, payment_type: paymentType, personel: personelName })
+        }).then(res => res.json()).then(r => {
+            alert(r.message);
+            if (r.success) loadInside();
+        });
+    });
+}
+
+let globalPinCallback = null;
+function promptPIN(callback) {
+    globalPinCallback = callback;
+    document.getElementById('globalPinInput').value = '';
+    document.getElementById('pinModalBg').style.display = 'flex';
+    setTimeout(() => document.getElementById('globalPinInput').focus(), 100);
+}
+function closeGlobalPin() {
+    document.getElementById('pinModalBg').style.display = 'none';
+    globalPinCallback = null;
+}
+function verifyGlobalPin() {
+    const pin = document.getElementById('globalPinInput').value;
+    if (!pin || pin.length !== 4) return alert("Lütfen 4 haneli şifrenizi giriniz.");
+    
+    fetch('/api/staff/verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pin })
+    }).then(r => r.json()).then(res => {
+        if (res.success) {
+            const cb = globalPinCallback;
+            closeGlobalPin();
+            if (cb) cb(res.name);
+        } else { alert(res.message); }
+    }).catch(err => alert("Bağlantı hatası: " + err.message));
+}
+
+document.getElementById('globalPinInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); verifyGlobalPin(); }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yeni Kayıt</title>
+<style>
+body{font-family:Arial, sans-serif; background:#f4f4f4;margin:0; padding:20px;color:#111}
+.back-btn{display:inline-block;padding: 10px 16px; background: #111;color:#fff; text-decoration:none;border-radius:10px;margin-bottom:16px}
+.wrap{max-width:600px; margin:auto; background:#fff;padding: 24px; border-radius: 22px; box-shadow:0 4px 10px rgba(0,0,0,0.05)}
+h1{margin:0 0 20px; font-size:30px}
+label{display:block;font-weight:bold; margin-top: 12px; margin-bottom: 6px;color:#444}
+input, select, textarea{width: 100%; box-sizing: border-box; padding: 14px; border:1px solid #ccc; border-radius: 10px; font-size:16px}
+.checkbox-wrap{display: flex; align-items:center; margin-top: 20px; gap:10px; background:#f9fafb; padding:15px; border-radius:10px; margin-bottom:20px}
+.checkbox-wrap input{width:24px; height: 24px;margin:0}
+.btn{width:100%;border:0;border-radius: 14px; padding: 16px; background: #111;color:#fff;font-size:18px; font-weight:bold; cursor:pointer}
+.modal-bg{position:fixed; inset:0; background:rgba(0,0,0,.55); display: none; align-items:center; justify-content:center; z-index:9999;}
+.modal{background:#fff;border-radius: 22px; padding: 24px; width: 100%; box-sizing:border-box}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back-btn" href="/home.html"> Ana Menü</a>
+<h1>Yeni Öğrenci Kaydı</h1>
+<label>Öğrenci Adı Soyadı (*)</label>
+<input type="text" id="sName" placeholder="Örn: Ali Yılmaz">
+<label>Veli Adı Soyadı</label>
+<input type="text" id="pName" placeholder="Örn: Ayşe Yılmaz">
+<label>Veli Telefonu (*)</label>
+<input type="tel" id="pPhone" placeholder="Örn: 05XX XXX XX XX">
+<label>Cari Türü</label>
+<select id="cTuru">
+<option value="Dramatik Oyun Alanı">Dramatik Oyun Alanı</option>
+<option value="Atölye Katılımcısı">Atölye Katılımcısı</option>
+</select>
+<label>Doğum Tarihi</label>
+<input type="date" id="bDate">
+<label>RFID Kart Numarası</label>
+<input type="text" id="rfid" placeholder="Karta okutun veya boş bırakın">
+<label>Notlar / Alerji Durumu</label>
+<textarea id="note" rows="3" placeholder="Özel notlar..."></textarea>
+<div class="checkbox-wrap">
+<input type="checkbox" id="startEntry" checked>
+<label style="margin:0">Kaydet ve hemen giriş başlat</label>
+</div>
+<button class="btn" onclick="save()">ÖĞRENCİYİ KAYDET</button>
+</div>
+
+<!-- RFID EKSİK UYARI MODALI -->
+<div class="modal-bg" id="rfidWarningBg" style="z-index:99999;">
+  <div class="modal" style="max-width:350px; text-align:center;">
+    <h3 style="margin-top:0;">Kart Tanımlanmadı!</h3>
+    <p>Kart tanımlamadan devam etmek istediğinize emin misiniz?</p>
+    <div style="display:flex; gap:10px; flex-direction:column; margin-top:20px;">
+      <button style="border:none; padding:15px; border-radius:12px; background:#1d4ed8; color:#fff; font-weight:bold; cursor:pointer;" onclick="closeRfidWarningAndFocus()">TANIMLA</button>
+      <button style="border:none; padding:15px; border-radius:12px; background:#b91c1c; color:#fff; font-weight:bold; cursor:pointer;" onclick="proceedWithoutRfid()">TANIMLAMADAN DEVAM ET</button>
+    </div>
+  </div>
+</div>
+
+<!-- PERSONEL ŞİFRE MODALI -->
+<div class="modal-bg" id="pinModalBg" style="z-index:9999;">
+  <div class="modal" style="max-width:320px; text-align:center; padding:30px 20px;">
+    <h3 style="margin-top:0; color:#111;">Personel Şifresi</h3>
+    <p style="font-size:14px; color:#666;">İşlemi onaylamak için 4 haneli PIN girin.</p>
+    <input type="password" id="globalPinInput" maxlength="4" style="font-size:32px; text-align:center; letter-spacing:15px; width:100%; box-sizing:border-box; padding:15px; border-radius:12px; border:2px solid #ccc; margin-bottom:20px;">
+    <div style="display:flex; gap:10px;">
+      <button style="flex:1; border:none; padding:15px; border-radius:12px; background:#15803d; color:#fff; font-weight:bold; font-size:16px; cursor:pointer;" onclick="verifyGlobalPin()">ONAYLA</button>
+      <button style="flex:1; border:none; padding:15px; border-radius:12px; background:#6b7280; color:#fff; font-weight:bold; font-size:16px; cursor:pointer;" onclick="closeGlobalPin()">İPTAL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// RFID Uyarı İşlemleri
+function save() {
+    const sName = document.getElementById('sName').value.trim();
+    const pPhone = document.getElementById('pPhone').value.trim();
+    const rfidVal = document.getElementById('rfid').value.trim();
+
+    if(!sName || !pPhone) {
+        alert("Öğrenci adı ve veli telefonu zorunludur.");
+        return;
+    }
+
+    if (!rfidVal) {
+        document.getElementById('rfidWarningBg').style.display = 'flex';
+        return;
+    }
+    
+    executeSave();
+}
+
+function closeRfidWarningAndFocus() {
+    document.getElementById('rfidWarningBg').style.display = 'none';
+    document.getElementById('rfid').focus();
+}
+
+function proceedWithoutRfid() {
+    document.getElementById('rfidWarningBg').style.display = 'none';
+    executeSave();
+}
+
+// Orijinal Kayıt İşlemi
+function executeSave() {
+    const data = {
+        student_name: document.getElementById('sName').value,
+        parent_name: document.getElementById('pName').value,
+        parent_phone: document.getElementById('pPhone').value,
+        cari_turu: document.getElementById('cTuru').value,
+        birth_date: document.getElementById('bDate').value,
+        rfid_id: document.getElementById('rfid').value,
+        note: document.getElementById('note').value,
+        start_entry: document.getElementById('startEntry').checked
+    };
+
+    promptPIN(function(personelName) {
+        data.personel = personelName;
+        fetch('/api/students/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(r => {
+            alert(r.message);
+            if (r.success) {
+                window.location.href = '/index.html?id=' + encodeURIComponent(r.child_id);
+            }
+        });
+    });
+}
+
+// Personel PIN İşlemleri
+let globalPinCallback = null;
+function promptPIN(callback) {
+    globalPinCallback = callback;
+    document.getElementById('globalPinInput').value = '';
+    document.getElementById('pinModalBg').style.display = 'flex';
+    setTimeout(() => document.getElementById('globalPinInput').focus(), 100);
+}
+function closeGlobalPin() {
+    document.getElementById('pinModalBg').style.display = 'none';
+    globalPinCallback = null;
+}
+function verifyGlobalPin() {
+    const pin = document.getElementById('globalPinInput').value;
+    if (!pin || pin.length !== 4) return alert("Lütfen 4 haneli şifrenizi giriniz.");
+    
+    fetch('/api/staff/verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pin })
+    }).then(r => r.json()).then(res => {
+        if (res.success) {
+            const cb = globalPinCallback; 
+            closeGlobalPin();
+            if (cb) cb(res.name); 
+        } else { 
+            alert(res.message); 
+        }
+    }).catch(err => {
+        alert("Bağlantı hatası: " + err.message);
+    });
+}
+
+document.getElementById('globalPinInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); verifyGlobalPin(); }
+});
+</script>
+</body>
+</html>

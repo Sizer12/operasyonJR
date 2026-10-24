@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raporlar</title>
+<style>
+body{font-family: Arial, sans-serif; background:#f4f4f4;margin:0; padding: 20px;color:#111}
+.back-btn{display:inline-block; padding: 10px 16px; background: #111;color:#fff;text-decoration:none;border-radius:10px;margin-bottom:16px}
+.wrap{max-width: 900px; margin:auto} h1{margin:0 0 20px; font-size:32px}
+.excel-btn{display:block; width: 100%; border:0;border-radius: 14px; padding: 20px; background:#16a34a;color:#fff; font-size:18px; font-weight:bold; cursor:pointer; text-align:center; text-decoration:none; margin-bottom:20px}
+.stats-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:16px; margin-bottom:30px}
+.stat-box{background:#fff;padding: 20px; border-radius: 16px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,0.05)}
+.stat-label{color:#666; font-size: 14px; font-weight:bold; margin-bottom:8px} .stat-val{font-size: 28px; font-weight:bold}
+.table-wrap{background:#fff;padding: 20px; border-radius: 20px; box-shadow:0 4px 14px rgba(0,0,0,0.05); overflow-x:auto}
+table{width:100%; border-collapse:collapse; font-size:14px}
+th, td{text-align:left; padding: 12px; border-bottom: 1px solid #eee} th{color:#666}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back-btn" href="/home.html"> Ana Menü</a>
+<h1>Günlük Rapor & Dışa Aktarım</h1>
+<button class="excel-btn" onclick="window.location.href='/api/export/excel'">Tüm Veritabanını EXCEL Olarak İndir</button>
+<h2>Bugünün Özeti</h2>
+<div class="stats-grid">
+  <div class="stat-box"><div class="stat-label">Şu An İçeride</div><div class="stat-val" id="sInside">0</div></div>
+  <div class="stat-box"><div class="stat-label">Bugün Çıkan</div><div class="stat-val" id="sEntries">0</div></div>
+  <div class="stat-box"><div class="stat-label">Nakit (TL)</div><div class="stat-val" id="sCash" style="color:#15803d">0</div></div>
+  <div class="stat-box"><div class="stat-label">Kart (TL)</div><div class="stat-val" id="sCard" style="color:#1d4ed8">0</div></div>
+  <div class="stat-box"><div class="stat-label">Ücretsiz / Hak</div><div class="stat-val" id="sFree" style="color:#8b5cf6">0</div></div>
+</div>
+<div class="table-wrap">
+  <h3>Bugün Kapanan İşlemler</h3>
+  <table>
+    <thead><tr><th>Öğrenci</th><th>Giriş</th><th>Çıkış</th><th>Tahsilat (TL)</th><th>Ödeme</th><th>Personel</th></tr></thead>
+    <tbody id="todayTable"><tr><td colspan="6">Yükleniyor...</td></tr></tbody>
+  </table>
+</div>
+</div>
+<script>
+fetch('/api/reports/summary').then(res => res.json()).then(r => {
+  if(!r.success) return;
+  document.getElementById('sInside').innerText = r.inside_count;
+  document.getElementById('sEntries').innerText = r.today.entries;
+  document.getElementById('sCash').innerText = r.today.cash;
+  document.getElementById('sCard').innerText = r.today.card;
+  document.getElementById('sFree').innerText = r.today.free;
+  
+  const table = document.getElementById('todayTable');
+  if(!r.today_logs || r.today_logs.length === 0) { table.innerHTML = "<tr><td colspan='6'>Bugün henüz işlem yok.</td></tr>"; return; }
+  table.innerHTML = r.today_logs.map(l => `
+    <tr>
+      <td><b>${l.student_name}</b> <br><small>${l.child_id}</small></td>
+      <td>${l.entry_time}</td>
+      <td>${l.exit_time}</td>
+      <td><b>${l.fee}</b></td>
+      <td>${l.payment_type}</td>
+      <td>${l.personel || '-'}</td>
+    </tr>
+  `).join('');
+});
+</script>
+</body>
+</html>
